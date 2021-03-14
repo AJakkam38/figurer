@@ -1,11 +1,15 @@
 package main
 
 import (
-	"figurer/calc"
-	"fmt"
-
+	"figurer/app"
+	"figurer/app/config"
+	"figurer/app/models"
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	_ "github.com/go-sql-driver/mysql"
 )
+
+var err error
 
 func init() {
 	log.SetFormatter(&log.TextFormatter{
@@ -14,22 +18,20 @@ func init() {
 	log.SetLevel(log.InfoLevel)
 }
 
-func main() {
+func main()  {
+	config.DB, err = gorm.Open(
+		"mysql",
+		config.DbURL(config.BuildDBConfig()),
+	)
 
-	log.Info("Starting the Figurer app...\n")
+	if err != nil {
+		log.Fatal("Database connection failed.\nStatus:", err)
+	}
+	log.Info("Connected to Database successfully !")
+	defer config.DB.Close()
+	// Migrate the schema
+	config.DB.AutoMigrate(&models.Calculations{})
 
-	var first, second, operator string
-	var result float64
-
-	fmt.Println("Enter the operator:\nAdd: +\nSubtract: -\nMultiply: *\nDivide: /")
-	fmt.Scanln(&operator)
-
-	fmt.Println("Enter your first number:")
-	fmt.Scanln(&first)
-
-	fmt.Println("Enter your second number:")
-	fmt.Scanln(&second)
-
-	result = calc.Calculate(first, second, operator)
-	fmt.Println("Your result is", result)
+	config.DB.Create(app.Run())
+	log.Info("Updated Calculations table !")
 }
